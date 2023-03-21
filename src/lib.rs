@@ -173,6 +173,8 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    #[cfg(feature = "f16")]
+    use half::f16;
 
     #[cfg(not(feature = "test-cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
@@ -180,7 +182,13 @@ pub(crate) mod tests {
     #[cfg(feature = "test-cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
-    #[cfg(not(feature = "test-f64"))]
+    #[cfg(all(feature = "test-f64", feature = "test-f16"))]
+    compile_error!("f64 and f16 cannot be tested at the same time");
+
+    #[cfg(feature = "test-f16")]
+    pub type TestDtype = f16;
+
+    #[cfg(not(any(feature = "test-f64", feature = "test-f16")))]
     pub type TestDtype = f32;
 
     #[cfg(feature = "test-f64")]
@@ -200,6 +208,20 @@ pub(crate) mod tests {
         {
             if let Some((l, r)) = self.get_far_pair(rhs, tolerance) {
                 panic!("lhs != rhs | {l} != {r}\n\n{self:?}\n\n{rhs:?}");
+            }
+        }
+    }
+
+    #[cfg(feature = "f16")]
+    impl AssertClose for f16 {
+        type Elem = f16;
+        const DEFAULT_TOLERANCE: Self::Elem = 1e-6;
+        fn get_far_pair(&self, rhs: &Self, tolerance: f16) -> Option<(f16, f16)> {
+            use num_traits::Float;
+            if (self - rhs).abs() > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
             }
         }
     }

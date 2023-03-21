@@ -1,5 +1,8 @@
 use super::{axes::*, ReduceShape, ReduceShapeTo};
 
+#[cfg(feature = "f16")]
+use half::f16;
+
 #[cfg(not(feature = "cuda"))]
 pub trait SafeZeros {}
 
@@ -32,6 +35,8 @@ macro_rules! unit {
     };
 }
 
+#[cfg(feature = "f16")]
+unit!(f16, f16::from_f32_const(1.0));
 unit!(f32, 1.0);
 unit!(f64, 1.0);
 unit!(usize, 1);
@@ -69,6 +74,8 @@ pub trait Dtype:
     + rand_distr::uniform::SampleUniform
 {
 }
+#[cfg(feature = "f16")]
+impl Dtype for f16 {} // Compilation error because f16 does not impl SampleUniform
 impl Dtype for f32 {}
 impl Dtype for f64 {}
 
